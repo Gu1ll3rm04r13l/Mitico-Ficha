@@ -84,6 +84,8 @@ function horasEntre(entrada: string, salida: string): number {
   return Math.max(0, ms / 3_600_000);
 }
 
+// `turnos` debe venir pre-filtrado a un solo mes (ver getTurnosMes). Las tarifas
+// se resuelven por día contra el historial; un turno fuera de rango daría subtotal 0.
 // Calcula el resumen del período a partir de los turnos del mes.
 export function calcularPeriodo(
   turnos: Turno[],

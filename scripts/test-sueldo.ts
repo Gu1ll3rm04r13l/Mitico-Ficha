@@ -116,4 +116,18 @@ test("incluirExtras=false excluye extras del total", () => {
   assert.equal(r.totalExtras, 500); // se reporta pero no se suma
 });
 
+test("extra abierto (sin salida) no cuenta", () => {
+  const turnos = [
+    turno({
+      tipo_jornada: "extra",
+      extra_modo: "horas",
+      entrada_at: "2026-05-08T12:00:00Z",
+    }),
+  ];
+  const r = calcularPeriodo(turnos, historial, { incluirExtras: true });
+  assert.equal(r.cantidadExtras, 0);
+  assert.equal(r.totalExtras, 0);
+  assert.equal(r.dias[0]!.cerrado, false);
+});
+
 console.log(`\n${pasados} tests OK`);
