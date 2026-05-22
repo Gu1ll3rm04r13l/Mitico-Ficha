@@ -1,0 +1,50 @@
+@import "tailwindcss";
+
+/* ===== Design tokens Mítico (extraídos de mitico-theta.vercel.app) ===== */
+@theme {
+  --color-bg-deep: #0d0d0d;
+  --color-bg-card: #1a1a1a;
+  --color-accent: #e8622a;
+  --color-accent-warm: #c4963a;
+  --color-cream: #f5e6c8;
+  --color-muted: #8a8070;
+
+  --font-heading: "Bebas Neue", sans-serif;
+  --font-body: "Inter", sans-serif;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  background-color: var(--color-bg-deep);
+  color: var(--color-cream);
+  font-family: var(--font-body);
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Tipografía de títulos / números grandes */
+.font-heading {
+  font-family: var(--font-heading);
+  letter-spacing: 0.04em;
+}
+
+/* Evita zoom raro en inputs iOS y deja la app sentirse nativa */
+input,
+button,
+select,
+textarea {
+  font-family: inherit;
+}
+
+/* Scrollbar sobria sobre fondo oscuro */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-bg-card);
+  border-radius: 4px;
+}
