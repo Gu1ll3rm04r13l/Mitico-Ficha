@@ -1,7 +1,6 @@
 // Tipos de dominio del fichaje. Espejo del schema `fichaje` en Supabase.
 
 export type ModalidadPago = "jornada" | "horas" | "mixto";
-export type TipoFichaje = "entrada" | "salida";
 export type TipoJornada = "completa" | "extra";
 export type ExtraModo = "cuarto" | "medio" | "completo" | "horas";
 export type RolApp = "admin" | "jefe" | "encargado" | "empleado";
@@ -35,19 +34,22 @@ export interface SalaryHistory {
   created_at: string;
 }
 
-export interface TimeRecord {
+export interface Turno {
   id: string;
   employee_id: string;
-  tipo: TipoFichaje;
   tipo_jornada: TipoJornada;
   extra_modo: ExtraModo | null;
   nota: string | null;
-  timestamp: string;
-  foto_url: string | null;
-  foto_path: string | null;
-  registrado_tarde: boolean;
-  enlace_id: string | null; // registro hermano al que se ata al completar un hueco
+  entrada_at: string;
+  entrada_foto_url: string | null;
+  entrada_foto_path: string | null;
+  entrada_manual: boolean;
+  salida_at: string | null;
+  salida_foto_url: string | null;
+  salida_foto_path: string | null;
+  salida_manual: boolean;
   created_at: string;
+  updated_at: string;
 }
 
 export interface AppUser {
