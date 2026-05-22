@@ -14,6 +14,7 @@ const schema = z.object({
   foto_base64: z.string().min(100),
 });
 
+// NOTE: lockout en memoria, se resetea en cold start (serverless). Tradeoff aceptado para este kiosko.
 const intentosPin = new Map<string, { fails: number; hasta: number }>();
 const MAX_FAILS = 5;
 const LOCK_MS = 5 * 60_000;
@@ -112,7 +113,7 @@ export async function POST(
     return NextResponse.json({ error: "no se pudo guardar la foto" }, { status: 500 });
   }
 
-  const { error: upErr } = await db
+  const { data: upd, error: upErr } = await db
     .from("turnos")
     .update({
       salida_at: cuando.toISOString(),
@@ -121,9 +122,13 @@ export async function POST(
       salida_manual: input.manual,
     })
     .eq("id", id)
-    .is("salida_at", null);
+    .is("salida_at", null)
+    .select("id");
   if (upErr) {
     return NextResponse.json({ error: "no se pudo registrar la salida" }, { status: 500 });
+  }
+  if (!upd || upd.length === 0) {
+    return NextResponse.json({ error: "ese turno ya fue cerrado" }, { status: 409 });
   }
 
   return NextResponse.json({ ok: true });

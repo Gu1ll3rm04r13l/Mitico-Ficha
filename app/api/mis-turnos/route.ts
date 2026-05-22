@@ -18,6 +18,11 @@ const schema = z.object({
   mes: z.string().regex(/^\d{4}-\d{2}$/).optional(),
 });
 
+// NOTE: lockout en memoria, se resetea en cold start (serverless). Tradeoff aceptado para este kiosko.
+const intentosPin = new Map<string, { fails: number; hasta: number }>();
+const MAX_FAILS = 5;
+const LOCK_MS = 5 * 60_000;
+
 export async function POST(req: Request) {
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
@@ -36,8 +41,23 @@ export async function POST(req: Request) {
   if (!emp || !emp.activo || !emp.pin_hash) {
     return NextResponse.json({ error: "empleado inválido" }, { status: 404 });
   }
+  const estadoPin = intentosPin.get(employee_id);
+  if (estadoPin && estadoPin.hasta > Date.now()) {
+    return NextResponse.json(
+      { error: "Demasiados intentos de PIN. Probá en unos minutos." },
+      { status: 429 },
+    );
+  }
   const ok = await verificarPin(pin, emp.pin_hash);
-  if (!ok) return NextResponse.json({ error: "PIN incorrecto" }, { status: 401 });
+  if (!ok) {
+    const fails = (estadoPin?.fails ?? 0) + 1;
+    intentosPin.set(employee_id, {
+      fails,
+      hasta: fails >= MAX_FAILS ? Date.now() + LOCK_MS : 0,
+    });
+    return NextResponse.json({ error: "PIN incorrecto" }, { status: 401 });
+  }
+  intentosPin.delete(employee_id);
 
   const cookieStore = await cookies();
   cookieStore.set(EMPLEADO_COOKIE, await firmarSesion(employee_id), {

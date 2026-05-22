@@ -26,6 +26,7 @@ const schema = z.object({
   foto_base64: z.string().min(100),
 });
 
+// NOTE: lockout en memoria, se resetea en cold start (serverless). Tradeoff aceptado para este kiosko.
 const intentosPin = new Map<string, { fails: number; hasta: number }>();
 const MAX_FAILS = 5;
 const LOCK_MS = 5 * 60_000;
