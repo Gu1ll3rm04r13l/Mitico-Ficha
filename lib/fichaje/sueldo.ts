@@ -13,7 +13,7 @@ import type {
 import { DEFAULT_EXTRA_FRACCIONES } from "./types";
 import { diaISOAR } from "./fechas";
 
-export const DIAS_MES = 30;
+const DIAS_MES = 30;
 
 export interface TarifaVigente {
   tarifaDiaria: number;
@@ -79,7 +79,7 @@ export interface ResumenPeriodo {
   total: number; // con o sin extras según incluirExtras
 }
 
-export function horasEntre(entrada: string, salida: string): number {
+function horasEntre(entrada: string, salida: string): number {
   const ms = new Date(salida).getTime() - new Date(entrada).getTime();
   return Math.max(0, ms / 3_600_000);
 }
