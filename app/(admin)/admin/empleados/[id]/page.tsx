@@ -6,7 +6,7 @@ import {
   getSalaryHistory,
   getFraccionesExtra,
 } from "@/lib/fichaje/admin";
-import { getFichajesMes, getParesMes, mesActual } from "@/lib/fichaje/historial";
+import { getTurnosMes, mesActual } from "@/lib/fichaje/historial";
 import { createServiceClient } from "@/lib/supabase/server";
 import { calcularPeriodo } from "@/lib/fichaje/sueldo";
 import { MesSelector } from "@/components/empleado/MesSelector";
@@ -20,12 +20,11 @@ import { SelfieGallery, type SelfieItem } from "@/components/admin/SelfieGallery
 
 export const dynamic = "force-dynamic";
 
-// Marca para fichajes que el empleado cargó en otro momento: reloj + tooltip.
-function BadgeTarde() {
+function BadgeManual() {
   return (
     <span
-      title="Fichaje Tardío (Fuera de horario)"
-      aria-label="Fichaje Tardío (Fuera de horario)"
+      title="Fichaje fuera de horario (hora cargada a mano)"
+      aria-label="Fichaje fuera de horario"
       className="inline-flex shrink-0 cursor-help items-center rounded-md bg-accent/20 px-1.5 py-0.5 text-xs text-accent"
     >
       ⏱
@@ -58,16 +57,15 @@ export default async function EmpleadoDetalle({
   const empleado = await getEmpleadoAdmin(id);
   if (!empleado) notFound();
 
-  const [historial, fracciones, registros, pares] = await Promise.all([
+  const [historial, fracciones, turnos] = await Promise.all([
     getSalaryHistory(id),
     getFraccionesExtra(),
-    getFichajesMes(id, mes),
-    getParesMes(id, mes),
+    getTurnosMes(id, mes),
   ]);
 
-  // Firmar URLs de las selfies presentes (bucket privado).
-  const paths = registros
-    .map((r) => r.foto_path)
+  // Firmar URLs de las selfies presentes (entrada + salida).
+  const paths = turnos
+    .flatMap((t) => [t.entrada_foto_path, t.salida_foto_path])
     .filter((p): p is string => !!p);
   const firmadas = new Map<string, string>();
   if (paths.length > 0) {
@@ -79,22 +77,35 @@ export default async function EmpleadoDetalle({
     });
   }
 
-  const resumen = calcularPeriodo(pares, historial, {
+  const resumen = calcularPeriodo(turnos, historial, {
     incluirExtras: true,
     fracciones,
   });
 
-  // Items para la galería: registros del mes con foto firmada disponible.
-  const galeria: SelfieItem[] = registros
-    .filter((r) => r.foto_path && firmadas.has(r.foto_path))
-    .map((r) => ({
-      url: firmadas.get(r.foto_path as string) as string,
-      timestamp: r.timestamp,
-      tipo: r.tipo,
-      tipoJornada: r.tipo_jornada,
-      extraModo: r.extra_modo,
-      nota: r.nota,
-    }));
+  // Galería: hasta 2 fotos por turno (entrada + salida).
+  const galeria: SelfieItem[] = [];
+  for (const t of turnos) {
+    if (t.entrada_foto_path && firmadas.has(t.entrada_foto_path)) {
+      galeria.push({
+        url: firmadas.get(t.entrada_foto_path) as string,
+        timestamp: t.entrada_at,
+        marca: "entrada",
+        tipoJornada: t.tipo_jornada,
+        extraModo: t.extra_modo,
+        nota: t.nota,
+      });
+    }
+    if (t.salida_at && t.salida_foto_path && firmadas.has(t.salida_foto_path)) {
+      galeria.push({
+        url: firmadas.get(t.salida_foto_path) as string,
+        timestamp: t.salida_at,
+        marca: "salida",
+        tipoJornada: t.tipo_jornada,
+        extraModo: t.extra_modo,
+        nota: t.nota,
+      });
+    }
+  }
 
   return (
     <div className="space-y-8">
@@ -134,57 +145,45 @@ export default async function EmpleadoDetalle({
               <th className="px-3 py-3 text-left">Salida</th>
               <th className="px-3 py-3 text-right">Horas</th>
               <th className="px-3 py-3 text-right">Subtotal</th>
+              <th className="px-3 py-3" />
             </tr>
           </thead>
           <tbody>
-            {resumen.dias.map((d, i) => {
-              const par = pares[i]!;
-              const ref = par.entrada ?? par.salida!; // siempre hay uno
+            {turnos.map((t, i) => {
+              const d = resumen.dias[i]!;
               return (
-                <tr key={i} className="border-t border-muted/10">
+                <tr key={t.id} className="border-t border-muted/10">
                   <td className="px-3 py-3 text-cream">
-                    {formatAR(ref.timestamp, "EEE d")}
+                    {formatAR(t.entrada_at, "EEE d")}
                   </td>
                   <td className="px-3 py-3">
                     <Badge>{tipoBadge(d.tipo, d.extraModo)}</Badge>
                   </td>
                   <td className="px-3 py-3">
-                    {par.entrada ? (
-                      <div className="flex items-center gap-2">
-                        <SelfieThumb
-                          url={
-                            par.entrada.foto_path
-                              ? (firmadas.get(par.entrada.foto_path) ?? null)
-                              : null
-                          }
-                          hora={horaAR(par.entrada.timestamp)}
-                        />
-                        {par.entrada.registrado_tarde && <BadgeTarde />}
-                        <BorrarFichajeBtn
-                          recordId={par.entrada.id}
-                          etiqueta={`entrada de las ${horaAR(par.entrada.timestamp)}`}
-                        />
-                      </div>
-                    ) : (
-                      <span className="text-muted">falta</span>
-                    )}
+                    <div className="flex items-center gap-2">
+                      <SelfieThumb
+                        url={
+                          t.entrada_foto_path
+                            ? (firmadas.get(t.entrada_foto_path) ?? null)
+                            : null
+                        }
+                        hora={horaAR(t.entrada_at)}
+                      />
+                      {t.entrada_manual && <BadgeManual />}
+                    </div>
                   </td>
                   <td className="px-3 py-3">
-                    {par.salida ? (
+                    {t.salida_at ? (
                       <div className="flex items-center gap-2">
                         <SelfieThumb
                           url={
-                            par.salida.foto_path
-                              ? (firmadas.get(par.salida.foto_path) ?? null)
+                            t.salida_foto_path
+                              ? (firmadas.get(t.salida_foto_path) ?? null)
                               : null
                           }
-                          hora={horaAR(par.salida.timestamp)}
+                          hora={horaAR(t.salida_at)}
                         />
-                        {par.salida.registrado_tarde && <BadgeTarde />}
-                        <BorrarFichajeBtn
-                          recordId={par.salida.id}
-                          etiqueta={`salida de las ${horaAR(par.salida.timestamp)}`}
-                        />
+                        {t.salida_manual && <BadgeManual />}
                       </div>
                     ) : (
                       <span className="text-muted">abierto</span>
@@ -202,12 +201,18 @@ export default async function EmpleadoDetalle({
                         }).format(d.subtotal)
                       : "—"}
                   </td>
+                  <td className="px-3 py-3 text-right">
+                    <BorrarFichajeBtn
+                      turnoId={t.id}
+                      etiqueta={`turno del ${formatAR(t.entrada_at, "d 'de' MMMM")}`}
+                    />
+                  </td>
                 </tr>
               );
             })}
-            {resumen.dias.length === 0 && (
+            {turnos.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-3 py-8 text-center text-muted">
+                <td colSpan={7} className="px-3 py-8 text-center text-muted">
                   Sin fichajes este mes.
                 </td>
               </tr>

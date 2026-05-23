@@ -77,11 +77,11 @@ export async function eliminarEmpleado(
 
   // 1) Juntar paths de selfies para limpiarlas del bucket (el cascade no toca Storage).
   const { data: registros } = await db
-    .from("time_records")
-    .select("foto_path")
+    .from("turnos")
+    .select("entrada_foto_path, salida_foto_path")
     .eq("employee_id", employeeId);
   const paths = (registros ?? [])
-    .map((r) => r.foto_path)
+    .flatMap((r) => [r.entrada_foto_path, r.salida_foto_path])
     .filter((p): p is string => !!p);
   if (paths.length > 0) {
     await svc.storage.from("fichaje-selfies").remove(paths);
@@ -94,26 +94,27 @@ export async function eliminarEmpleado(
   return { ok: true };
 }
 
-// ---------- Eliminar un fichaje individual (staff) — para corregir mal cargados ----------
-export async function eliminarFichaje(
-  recordId: string,
-): Promise<ActionResult> {
+// ---------- Eliminar un turno (staff) — borra fila + sus 2 selfies ----------
+export async function eliminarTurno(turnoId: string): Promise<ActionResult> {
   await requireStaff();
   const svc = createServiceClient();
   const db = svc.schema("fichaje");
 
-  const { data: rec } = await db
-    .from("time_records")
-    .select("foto_path, employee_id")
-    .eq("id", recordId)
+  const { data: t } = await db
+    .from("turnos")
+    .select("entrada_foto_path, salida_foto_path, employee_id")
+    .eq("id", turnoId)
     .maybeSingle();
-  if (rec?.foto_path) {
-    await svc.storage.from("fichaje-selfies").remove([rec.foto_path]);
+  const paths = [t?.entrada_foto_path, t?.salida_foto_path].filter(
+    (p): p is string => !!p,
+  );
+  if (paths.length > 0) {
+    await svc.storage.from("fichaje-selfies").remove(paths);
   }
 
-  const { error } = await db.from("time_records").delete().eq("id", recordId);
-  if (error) return { ok: false, error: "No se pudo borrar el fichaje" };
-  if (rec?.employee_id) revalidatePath(`/admin/empleados/${rec.employee_id}`);
+  const { error } = await db.from("turnos").delete().eq("id", turnoId);
+  if (error) return { ok: false, error: "No se pudo borrar el turno" };
+  if (t?.employee_id) revalidatePath(`/admin/empleados/${t.employee_id}`);
   return { ok: true };
 }
 
