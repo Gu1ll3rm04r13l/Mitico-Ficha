@@ -2,15 +2,15 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { eliminarFichaje } from "@/lib/fichaje/mutations";
+import { eliminarTurno } from "@/lib/fichaje/mutations";
 
-// Borra un fichaje individual (entrada o salida) desde el panel admin.
+// Borra un turno completo (entrada+salida) desde el panel admin.
 export function BorrarFichajeBtn({
-  recordId,
+  turnoId,
   etiqueta,
 }: {
-  recordId: string;
-  etiqueta: string; // ej: "entrada de las 11:05"
+  turnoId: string;
+  etiqueta: string; // ej: "turno del 4 de mayo"
 }) {
   const router = useRouter();
   const [confirmando, setConfirmando] = useState(false);
@@ -18,7 +18,7 @@ export function BorrarFichajeBtn({
 
   function borrar() {
     start(async () => {
-      const r = await eliminarFichaje(recordId);
+      const r = await eliminarTurno(turnoId);
       setConfirmando(false);
       if (r.ok) router.refresh();
     });

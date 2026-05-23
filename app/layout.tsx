@@ -1,5 +1,20 @@
 import type { Metadata, Viewport } from "next";
+import { Bebas_Neue, Inter } from "next/font/google";
 import "./globals.css";
+
+// Fuentes self-hosted por Next (sin <link> bloqueante a Google) → primer paint
+// más rápido y sin parpadeo. Se exponen como CSS vars que usa globals.css.
+const bebasNeue = Bebas_Neue({
+  weight: "400",
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-bebas",
+});
+const inter = Inter({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-inter",
+});
 
 export const metadata: Metadata = {
   title: "Fichero Mítico",
@@ -26,19 +41,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="es">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link
-          rel="preconnect"
-          href="https://fonts.gstatic.com"
-          crossOrigin="anonymous"
-        />
-        <link
-          rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap"
-        />
-      </head>
+    <html lang="es" className={`${bebasNeue.variable} ${inter.variable}`}>
       <body className="min-h-dvh antialiased">{children}</body>
     </html>
   );

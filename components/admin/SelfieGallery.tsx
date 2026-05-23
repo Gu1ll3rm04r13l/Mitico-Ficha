@@ -3,12 +3,12 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { formatAR } from "@/lib/fichaje/fechas";
-import type { TipoFichaje, TipoJornada, ExtraModo } from "@/lib/fichaje/types";
+import type { TipoJornada, ExtraModo } from "@/lib/fichaje/types";
 
 export interface SelfieItem {
   url: string;
   timestamp: string;
-  tipo: TipoFichaje;
+  marca: "entrada" | "salida";
   tipoJornada: TipoJornada;
   extraModo: ExtraModo | null;
   nota: string | null;
@@ -22,7 +22,7 @@ const EXTRA_LABEL: Record<ExtraModo, string> = {
 };
 
 function tipoTexto(item: SelfieItem): string {
-  const accion = item.tipo === "entrada" ? "Entrada" : "Salida";
+  const accion = item.marca === "entrada" ? "Entrada" : "Salida";
   const detalle =
     item.tipoJornada === "completa"
       ? "Jornada completa"
@@ -94,12 +94,12 @@ export function SelfieGallery({
             </span>
             <span
               className={`absolute left-1 top-1 rounded px-1 text-[10px] font-semibold ${
-                it.tipo === "entrada"
+                it.marca === "entrada"
                   ? "bg-accent text-bg-deep"
                   : "bg-bg-deep/80 text-cream ring-1 ring-muted/40"
               }`}
             >
-              {it.tipo === "entrada" ? "E" : "S"}
+              {it.marca === "entrada" ? "E" : "S"}
             </span>
           </button>
         ))}

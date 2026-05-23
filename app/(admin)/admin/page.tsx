@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { getKpisMes, getFraccionesExtra } from "@/lib/fichaje/admin";
+import { getDashboardResumen, getFraccionesExtra } from "@/lib/fichaje/admin";
 import { getStaffSession } from "@/lib/fichaje/auth";
 import { mesActual } from "@/lib/fichaje/historial";
+import { horaAR } from "@/lib/fichaje/fechas";
+import { formatARS } from "@/lib/fichaje/sueldo";
 import { Card } from "@/components/ui/Card";
 import { FraccionesExtraForm } from "@/components/admin/FraccionesExtraForm";
 
@@ -11,8 +13,8 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminDashboard() {
   const mes = mesActual();
-  const [kpis, fracciones, session] = await Promise.all([
-    getKpisMes(mes),
+  const [resumen, fracciones, session] = await Promise.all([
+    getDashboardResumen(mes),
     getFraccionesExtra(),
     getStaffSession(),
   ]);
@@ -26,18 +28,42 @@ export default async function AdminDashboard() {
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Card>
           <p className="text-sm text-muted">Empleados activos</p>
           <p className="mt-1 font-heading text-5xl text-accent">
-            {kpis.empleadosActivos}
+            {resumen.empleadosActivos}
           </p>
         </Card>
+
         <Card>
-          <p className="text-sm text-muted">Fichajes este mes</p>
+          <p className="text-sm text-muted">Total a pagar del mes</p>
           <p className="mt-1 font-heading text-5xl text-accent">
-            {kpis.totalFichajes}
+            {formatARS(resumen.totalPagarMes)}
           </p>
+          <p className="mt-1 text-xs text-muted">Estimado (base + extras)</p>
+        </Card>
+
+        <Card>
+          <p className="text-sm text-muted">Fichados ahora</p>
+          <p className="mt-1 font-heading text-5xl text-accent">
+            {resumen.fichadosAhora.length}
+          </p>
+          {resumen.fichadosAhora.length > 0 ? (
+            <ul className="mt-3 space-y-1 text-sm">
+              {resumen.fichadosAhora.map((f) => (
+                <li
+                  key={f.employeeId}
+                  className="flex items-center justify-between gap-2"
+                >
+                  <span className="text-cream">{f.nombre}</span>
+                  <span className="text-muted">desde {horaAR(f.entradaAt)}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-3 text-sm text-muted">Nadie fichado en este momento.</p>
+          )}
         </Card>
       </div>
 
