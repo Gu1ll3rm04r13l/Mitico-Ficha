@@ -22,7 +22,6 @@ export default async function FicharEmpleadoPage({
       <FichajeFlow
         empleadoId={empleado.id}
         nombre={empleado.nombre}
-        modalidad={empleado.modalidad_pago}
         tienePin={!!empleado.pin_hash}
       />
     </main>

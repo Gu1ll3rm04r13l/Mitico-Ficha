@@ -83,7 +83,34 @@ export function ConfigSueldoForm({ empleado }: { empleado: Employee }) {
       </button>
 
       {avanzado && (
-        <div className="grid gap-3 rounded-xl border border-muted/15 p-4 sm:grid-cols-3">
+        <div className="space-y-3 rounded-xl border border-muted/15 p-4">
+          <div className="rounded-lg border border-accent-warm/30 bg-accent-warm/10 p-3 text-xs leading-relaxed text-cream/90">
+            <p className="mb-1 font-semibold text-accent-warm">ℹ INFO — ¿qué es esto?</p>
+            <p>
+              Normalmente la <strong>tarifa diaria</strong> sale del sueldo mensual ÷ 30, y
+              la <strong>tarifa por hora</strong> sale de esa diaria ÷ horas de jornada. Estos
+              campos sirven para <strong>forzar a mano</strong> esos valores cuando el cálculo
+              automático no aplica:
+            </p>
+            <ul className="mt-1 list-disc space-y-0.5 pl-4">
+              <li>
+                <strong>Diario manual:</strong> fija lo que vale un día completo, ignorando
+                el ÷30 (ej: pagás $20.000 el día sin importar el mensual).
+              </li>
+              <li>
+                <strong>Hora manual:</strong> fija el valor de la hora para los extras por
+                hora, ignorando el cálculo desde la diaria.
+              </li>
+              <li>
+                <strong>Horas jornada:</strong> cuántas horas dura una jornada completa
+                (base para calcular la tarifa horaria). Default 8.
+              </li>
+            </ul>
+            <p className="mt-1 text-muted">
+              Dejá los manuales en blanco para usar el cálculo automático.
+            </p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-3">
           <Input
             name="sueldo_diario_override"
             label="Diario manual"
@@ -108,6 +135,7 @@ export function ConfigSueldoForm({ empleado }: { empleado: Employee }) {
             value={horasJornada}
             onChange={(e) => setHorasJornada(e.target.value)}
           />
+          </div>
         </div>
       )}
       {!avanzado && (

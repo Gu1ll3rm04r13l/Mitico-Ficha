@@ -9,6 +9,7 @@ export const runtime = "nodejs";
 
 const schema = z.object({
   pin: z.string().min(4).max(8),
+  nota: z.string().max(200).nullable().optional(),
   at: z.string().datetime(),
   manual: z.boolean().default(false),
   foto_base64: z.string().min(100),
@@ -113,14 +114,20 @@ export async function POST(
     return NextResponse.json({ error: "no se pudo guardar la foto" }, { status: 500 });
   }
 
+  // La nota se guarda en la entrada; en la salida solo la pisamos si vino una nueva.
+  const cambios: Record<string, unknown> = {
+    salida_at: cuando.toISOString(),
+    salida_foto_path: fotoPath,
+    salida_foto_url: fotoUrl,
+    salida_manual: input.manual,
+  };
+  if (input.nota != null && input.nota.trim() !== "") {
+    cambios.nota = input.nota.trim();
+  }
+
   const { data: upd, error: upErr } = await db
     .from("turnos")
-    .update({
-      salida_at: cuando.toISOString(),
-      salida_foto_path: fotoPath,
-      salida_foto_url: fotoUrl,
-      salida_manual: input.manual,
-    })
+    .update(cambios)
     .eq("id", id)
     .is("salida_at", null)
     .select("id");

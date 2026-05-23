@@ -6,19 +6,8 @@ import { getEmpleado } from "@/lib/fichaje/queries";
 import { getTurnosMes, mesActual } from "@/lib/fichaje/historial";
 import { MesSelector } from "@/components/empleado/MesSelector";
 import { LogoutButton } from "@/components/empleado/LogoutButton";
-
-// Marca para fichajes cargados fuera del momento (hora a mano).
-function BadgeManual() {
-  return (
-    <span
-      title="Fichaje fuera de horario (hora cargada a mano)"
-      aria-label="Fichaje fuera de horario"
-      className="ml-2 inline-flex cursor-help items-center rounded-md bg-accent/20 px-1.5 py-0.5 text-xs text-accent"
-    >
-      ⏱
-    </span>
-  );
-}
+import { VolverButton } from "@/components/empleado/VolverButton";
+import { BadgeManual } from "@/components/fichaje/BadgeManual";
 
 export const dynamic = "force-dynamic";
 
@@ -47,7 +36,10 @@ export default async function MiHistorialPage({
           </h1>
           <p className="text-sm text-muted">Tu historial de fichajes</p>
         </div>
-        <LogoutButton />
+        <div className="flex items-center gap-2">
+          <VolverButton />
+          <LogoutButton />
+        </div>
       </header>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -115,7 +107,7 @@ export default async function MiHistorialPage({
       )}
 
       <p className="mt-6 text-center text-xs text-muted">
-        Solo ves tus propios fichajes. Para fichar, usá la pantalla del local.
+        Solo ves tus propios fichajes.
       </p>
     </main>
   );

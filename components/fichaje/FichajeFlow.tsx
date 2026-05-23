@@ -5,7 +5,7 @@ import { useCallback, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { PinPad } from "./PinPad";
 import { TurnosTable } from "./TurnosTable";
-import type { ModalidadPago, Turno } from "@/lib/fichaje/types";
+import type { Turno } from "@/lib/fichaje/types";
 
 type Paso = "pin" | "tabla" | "cargando";
 
@@ -16,12 +16,10 @@ function mesActualISO(): string {
 export function FichajeFlow({
   empleadoId,
   nombre,
-  modalidad,
   tienePin,
 }: {
   empleadoId: string;
   nombre: string;
-  modalidad: ModalidadPago;
   tienePin: boolean;
 }) {
   const router = useRouter();
@@ -119,7 +117,6 @@ export function FichajeFlow({
         turnos={turnos}
         employeeId={empleadoId}
         pin={pin}
-        modalidad={modalidad}
         onChanged={() => {
           cargarTurnos(pin).catch((e) =>
             setError(e instanceof Error ? e.message : "Error al refrescar"),

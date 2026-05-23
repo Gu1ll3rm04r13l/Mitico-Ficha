@@ -4,20 +4,8 @@ import { useState } from "react";
 import { formatAR, horaAR } from "@/lib/fichaje/fechas";
 import { Button } from "@/components/ui/Button";
 import { FichajeDialog } from "./FichajeDialog";
-import type { ModalidadPago, Turno } from "@/lib/fichaje/types";
-
-// Marca de fichaje cargado fuera del momento (hora a mano).
-function BadgeManual() {
-  return (
-    <span
-      title="Fichaje fuera de horario (hora cargada a mano)"
-      aria-label="Fichaje fuera de horario"
-      className="ml-1 inline-flex cursor-help items-center rounded-md bg-accent/20 px-1 py-0.5 text-[10px] text-accent"
-    >
-      ⏱
-    </span>
-  );
-}
+import { BadgeManual } from "./BadgeManual";
+import type { Turno } from "@/lib/fichaje/types";
 
 type Dialogo =
   | { tipo: "entrada" }
@@ -28,13 +16,11 @@ export function TurnosTable({
   turnos,
   employeeId,
   pin,
-  modalidad,
   onChanged,
 }: {
   turnos: Turno[];
   employeeId: string;
   pin: string;
-  modalidad: ModalidadPago;
   onChanged: () => void; // re-fetch en el padre tras un fichaje
 }) {
   const [dialogo, setDialogo] = useState<Dialogo>(null);
@@ -71,13 +57,13 @@ export function TurnosTable({
                 </td>
                 <td className="px-3 py-3 text-cream">
                   {horaAR(t.entrada_at)}
-                  {t.entrada_manual && <BadgeManual />}
+                  {t.entrada_manual && <BadgeManual size="xs" />}
                 </td>
                 <td className="px-3 py-3 text-cream">
                   {t.salida_at ? (
                     <>
                       {horaAR(t.salida_at)}
-                      {t.salida_manual && <BadgeManual />}
+                      {t.salida_manual && <BadgeManual size="xs" />}
                     </>
                   ) : (
                     <button
@@ -108,7 +94,6 @@ export function TurnosTable({
         <FichajeDialog
           employeeId={employeeId}
           pin={pin}
-          modalidad={modalidad}
           mode={dialogo.tipo}
           turnoId={dialogo.tipo === "salida" ? dialogo.turnoId : undefined}
           onDone={cerrarYRefrescar}

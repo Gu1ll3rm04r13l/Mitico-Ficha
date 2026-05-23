@@ -9,8 +9,8 @@
   --color-cream: #f5e6c8;
   --color-muted: #8a8070;
 
-  --font-heading: "Bebas Neue", sans-serif;
-  --font-body: "Inter", sans-serif;
+  --font-heading: var(--font-bebas), "Bebas Neue", sans-serif;
+  --font-body: var(--font-inter), "Inter", sans-serif;
 }
 
 :root {
@@ -23,6 +23,15 @@ body {
   color: var(--color-cream);
   font-family: var(--font-body);
   -webkit-tap-highlight-color: transparent;
+}
+
+/* Saca la demora de ~300ms del tap en móvil: el primer toque responde al toque. */
+button,
+a,
+select,
+[role="button"],
+label {
+  touch-action: manipulation;
 }
 
 /* Tipografía de títulos / números grandes */

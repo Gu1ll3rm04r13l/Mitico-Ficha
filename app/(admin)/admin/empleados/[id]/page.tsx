@@ -13,35 +13,14 @@ import { MesSelector } from "@/components/empleado/MesSelector";
 import { ConfigSueldoForm } from "@/components/admin/ConfigSueldoForm";
 import { EmpleadoAcciones } from "@/components/admin/EmpleadoAcciones";
 import { SueldoSummary } from "@/components/admin/SueldoSummary";
-import { Card, Badge } from "@/components/ui/Card";
+import { Card } from "@/components/ui/Card";
 import { SelfieThumb } from "@/components/admin/SelfieThumb";
 import { BorrarFichajeBtn } from "@/components/admin/BorrarFichajeBtn";
 import { SelfieGallery, type SelfieItem } from "@/components/admin/SelfieGallery";
+import { TipoTurnoEditor } from "@/components/admin/TipoTurnoEditor";
+import { BadgeManual } from "@/components/fichaje/BadgeManual";
 
 export const dynamic = "force-dynamic";
-
-function BadgeManual() {
-  return (
-    <span
-      title="Fichaje fuera de horario (hora cargada a mano)"
-      aria-label="Fichaje fuera de horario"
-      className="inline-flex shrink-0 cursor-help items-center rounded-md bg-accent/20 px-1.5 py-0.5 text-xs text-accent"
-    >
-      ⏱
-    </span>
-  );
-}
-
-function tipoBadge(tipo: string, extraModo: string | null): string {
-  if (tipo === "completa") return "Jornada";
-  const map: Record<string, string> = {
-    cuarto: "Extra 1/4",
-    medio: "Extra 1/2",
-    completo: "Extra día",
-    horas: "Extra h",
-  };
-  return extraModo ? (map[extraModo] ?? "Extra") : "Extra";
-}
 
 export default async function EmpleadoDetalle({
   params,
@@ -143,6 +122,7 @@ export default async function EmpleadoDetalle({
               <th className="px-3 py-3 text-left">Tipo</th>
               <th className="px-3 py-3 text-left">Entrada</th>
               <th className="px-3 py-3 text-left">Salida</th>
+              <th className="px-3 py-3 text-left">Notas</th>
               <th className="px-3 py-3 text-right">Horas</th>
               <th className="px-3 py-3 text-right">Subtotal</th>
               <th className="px-3 py-3" />
@@ -157,7 +137,11 @@ export default async function EmpleadoDetalle({
                     {formatAR(t.entrada_at, "EEE d")}
                   </td>
                   <td className="px-3 py-3">
-                    <Badge>{tipoBadge(d.tipo, d.extraModo)}</Badge>
+                    <TipoTurnoEditor
+                      turnoId={t.id}
+                      tipoInicial={t.tipo_jornada}
+                      extraInicial={t.extra_modo}
+                    />
                   </td>
                   <td className="px-3 py-3">
                     <div className="flex items-center gap-2">
@@ -189,6 +173,13 @@ export default async function EmpleadoDetalle({
                       <span className="text-muted">abierto</span>
                     )}
                   </td>
+                  <td className="max-w-[12rem] px-3 py-3 text-cream">
+                    {t.nota ? (
+                      <span className="line-clamp-2 text-xs">{t.nota}</span>
+                    ) : (
+                      <span className="text-muted">—</span>
+                    )}
+                  </td>
                   <td className="px-3 py-3 text-right text-cream">
                     {d.horas != null ? d.horas.toFixed(1) : "—"}
                   </td>
@@ -212,7 +203,7 @@ export default async function EmpleadoDetalle({
             })}
             {turnos.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-3 py-8 text-center text-muted">
+                <td colSpan={8} className="px-3 py-8 text-center text-muted">
                   Sin fichajes este mes.
                 </td>
               </tr>

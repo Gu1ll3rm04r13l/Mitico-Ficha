@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Button } from "@/components/ui/Button";
 import { Input, Select } from "@/components/ui/Input";
 import { CameraCapture } from "@/components/fichaje/CameraCapture";
-import type { ExtraModo, ModalidadPago, TipoJornada } from "@/lib/fichaje/types";
+import { formatAR } from "@/lib/fichaje/fechas";
 
 type Paso = "form" | "camara" | "enviando";
 
@@ -19,13 +19,31 @@ function hoyISO(): string {
   return new Date(d.getTime() - off).toISOString().slice(0, 10);
 }
 
+// Reloj en vivo (hora del local, AR) que corre segundo a segundo. Se muestra
+// cuando se ficha con "Hora actual" para que se vea el instante exacto.
+function RelojVivo() {
+  const [ahora, setAhora] = useState(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setAhora(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  return (
+    <div className="rounded-xl border border-accent/20 bg-bg-deep px-4 py-3 text-center">
+      <span className="block text-xs text-muted">Se registrará a esta hora</span>
+      <span className="font-heading text-3xl tabular-nums text-cream">
+        {formatAR(ahora, "HH:mm:ss")}
+      </span>
+    </div>
+  );
+}
+
 // Diálogo unificado de fichaje. Sirve para abrir entrada (mode="entrada") y para
 // cerrar un turno (mode="salida"). Por defecto usa "Hora actual" (now()); el
-// empleado puede elegir hora/día a mano (queda marcado manual=true).
+// empleado puede elegir hora/día a mano (queda marcado manual=true). El tipo de
+// jornada NO se elige acá: lo ajusta el admin desde el panel si hace falta.
 export function FichajeDialog({
   employeeId,
   pin,
-  modalidad,
   mode,
   turnoId,
   onDone,
@@ -33,7 +51,6 @@ export function FichajeDialog({
 }: {
   employeeId: string;
   pin: string;
-  modalidad: ModalidadPago;
   mode: "entrada" | "salida";
   turnoId?: string; // requerido si mode==="salida"
   onDone: () => void;
@@ -44,11 +61,8 @@ export function FichajeDialog({
   const [fecha, setFecha] = useState(hoyISO());
   const [hh, setHh] = useState("");
   const [mm, setMm] = useState("");
-  const [tipoJornada, setTipoJornada] = useState<TipoJornada>("completa");
-  const [extraModo, setExtraModo] = useState<ExtraModo>("medio");
+  const [nota, setNota] = useState("");
   const [error, setError] = useState<string | null>(null);
-
-  const pedirJornada = mode === "entrada" && modalidad === "mixto";
 
   // Arma el instante a fichar: now() o el elegido a mano (en hora local del cel).
   function calcularAt(): { at: string; manual: boolean } | null {
@@ -84,20 +98,25 @@ export function FichajeDialog({
     setPaso("enviando");
     setError(null);
 
+    const notaLimpia = nota.trim() || null;
     const url = mode === "entrada" ? "/api/turno" : `/api/turno/${turnoId}/salida`;
     const body =
       mode === "entrada"
         ? {
             employee_id: employeeId,
             pin,
-            tipo_jornada: pedirJornada ? tipoJornada : "completa",
-            extra_modo:
-              pedirJornada && tipoJornada === "extra" ? extraModo : null,
+            nota: notaLimpia,
             at: armado.at,
             manual: armado.manual,
             foto_base64: foto,
           }
-        : { pin, at: armado.at, manual: armado.manual, foto_base64: foto };
+        : {
+            pin,
+            nota: notaLimpia,
+            at: armado.at,
+            manual: armado.manual,
+            foto_base64: foto,
+          };
 
     const res = await fetch(url, {
       method: "POST",
@@ -165,6 +184,8 @@ export function FichajeDialog({
             </Button>
           </div>
 
+          {horaActual && <RelojVivo />}
+
           {!horaActual && (
             <>
               <Input
@@ -216,30 +237,20 @@ export function FichajeDialog({
             </>
           )}
 
-          {pedirJornada && (
-            <div className="grid grid-cols-1 gap-3 rounded-xl border border-muted/15 p-3">
-              <Select
-                label="Tipo de jornada"
-                value={tipoJornada}
-                onChange={(e) => setTipoJornada(e.target.value as TipoJornada)}
-              >
-                <option value="completa">Jornada completa</option>
-                <option value="extra">Extra (puntual)</option>
-              </Select>
-              {tipoJornada === "extra" && (
-                <Select
-                  label="Tipo de extra"
-                  value={extraModo}
-                  onChange={(e) => setExtraModo(e.target.value as ExtraModo)}
-                >
-                  <option value="cuarto">1/4 día</option>
-                  <option value="medio">1/2 día</option>
-                  <option value="completo">Día completo</option>
-                  <option value="horas">Por hora</option>
-                </Select>
-              )}
-            </div>
-          )}
+          <div>
+            <label className="mb-1 block text-sm text-muted" htmlFor="nota">
+              Notas (opcional)
+            </label>
+            <textarea
+              id="nota"
+              value={nota}
+              onChange={(e) => setNota(e.target.value)}
+              maxLength={200}
+              rows={2}
+              placeholder="Ej: amasado + biga, cambio de aceite…"
+              className="w-full rounded-lg border border-muted/30 bg-bg-card px-3 py-2 text-cream placeholder:text-muted/60 transition focus:border-accent focus:outline-none"
+            />
+          </div>
 
           {error && <p className="text-sm text-red-400">{error}</p>}
 

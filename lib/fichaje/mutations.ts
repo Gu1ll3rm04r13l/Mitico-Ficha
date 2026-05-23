@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { getStaffSession } from "./auth";
 import { hashPin, pinValido } from "./pin";
-import type { ModalidadPago, RolApp } from "./types";
+import type { ExtraModo, ModalidadPago, RolApp, TipoJornada } from "./types";
 
 // Todas las mutations validan rol staff/admin server-side antes de tocar datos.
 
@@ -114,6 +114,32 @@ export async function eliminarTurno(turnoId: string): Promise<ActionResult> {
 
   const { error } = await db.from("turnos").delete().eq("id", turnoId);
   if (error) return { ok: false, error: "No se pudo borrar el turno" };
+  if (t?.employee_id) revalidatePath(`/admin/empleados/${t.employee_id}`);
+  return { ok: true };
+}
+
+// ---------- Cambiar el TIPO de un turno ya fichado (staff) ----------
+// Permite corregir un fichaje cargado como "jornada" que en realidad era "extra"
+// (o viceversa). Si pasa a completa, limpia extra_modo; si es extra, exige un modo.
+export async function cambiarTipoTurno(
+  turnoId: string,
+  tipoJornada: TipoJornada,
+  extraModo: ExtraModo | null,
+): Promise<ActionResult> {
+  await requireStaff();
+  const nuevoExtra = tipoJornada === "extra" ? extraModo : null;
+  if (tipoJornada === "extra" && !nuevoExtra) {
+    return { ok: false, error: "Elegí el tipo de extra" };
+  }
+
+  const db = createServiceClient().schema("fichaje");
+  const { data: t, error } = await db
+    .from("turnos")
+    .update({ tipo_jornada: tipoJornada, extra_modo: nuevoExtra })
+    .eq("id", turnoId)
+    .select("employee_id")
+    .maybeSingle();
+  if (error) return { ok: false, error: "No se pudo cambiar el tipo" };
   if (t?.employee_id) revalidatePath(`/admin/empleados/${t.employee_id}`);
   return { ok: true };
 }

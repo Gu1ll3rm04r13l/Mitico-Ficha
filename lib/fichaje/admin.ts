@@ -5,8 +5,11 @@ import type {
   SalaryHistory,
   ExtraFracciones,
   RolApp,
+  Turno,
 } from "./types";
 import { DEFAULT_EXTRA_FRACCIONES } from "./types";
+import { rangoMes } from "./historial";
+import { calcularPeriodo } from "./sueldo";
 
 const db = async () => (await createClient()).schema("fichaje");
 
@@ -101,30 +104,81 @@ export async function listarCuentasDetalle(): Promise<CuentaDetalle[]> {
   }));
 }
 
-// KPIs simples del mes en curso para el dashboard.
-export async function getKpisMes(mes: string): Promise<{
-  totalFichajes: number;
-  empleadosActivos: number;
-}> {
-  const [y, m] = mes.split("-").map(Number) as [number, number];
-  const desde = new Date(Date.UTC(y, m - 1, 1)).toISOString();
-  const hasta = new Date(Date.UTC(y, m, 1)).toISOString();
-  const sb = await db();
+export interface FichadoAhora {
+  employeeId: string;
+  nombre: string;
+  entradaAt: string;
+}
 
-  const [{ count: fichajes }, { count: activos }] = await Promise.all([
+export interface DashboardResumen {
+  empleadosActivos: number;
+  totalPagarMes: number; // estimado del mes (base + extras)
+  fichadosAhora: FichadoAhora[]; // turnos abiertos (entrada sin salida)
+}
+
+// Datos del INICIO del panel: empleados activos, quién está fichado ahora y
+// el total estimado a pagar del mes en curso (suma de todos los empleados).
+export async function getDashboardResumen(
+  mes: string,
+): Promise<DashboardResumen> {
+  const sb = await db();
+  const { desde, hasta } = rangoMes(mes);
+  const fracciones = await getFraccionesExtra();
+
+  const [empRes, turnosRes, histRes, abiertosRes] = await Promise.all([
+    sb.from("employees").select("id, nombre, apellido, activo"),
     sb
-      .from("time_records")
-      .select("id", { count: "exact", head: true })
-      .gte("timestamp", desde)
-      .lt("timestamp", hasta),
+      .from("turnos")
+      .select("*")
+      .gte("entrada_at", desde)
+      .lt("entrada_at", hasta),
+    sb.from("salary_history").select("*"),
     sb
-      .from("employees")
-      .select("id", { count: "exact", head: true })
-      .eq("activo", true),
+      .from("turnos")
+      .select("id, employee_id, entrada_at")
+      .is("salida_at", null)
+      .order("entrada_at", { ascending: true }),
   ]);
 
-  return {
-    totalFichajes: fichajes ?? 0,
-    empleadosActivos: activos ?? 0,
-  };
+  const empleados = (empRes.data ?? []) as Pick<
+    Employee,
+    "id" | "nombre" | "apellido" | "activo"
+  >[];
+  const empById = new Map(empleados.map((e) => [e.id, e]));
+  const empleadosActivos = empleados.filter((e) => e.activo).length;
+
+  // Total a pagar: agrupo turnos del mes por empleado y corro el cálculo real.
+  const turnos = (turnosRes.data ?? []) as Turno[];
+  const hist = (histRes.data ?? []) as SalaryHistory[];
+  const histByEmp = new Map<string, SalaryHistory[]>();
+  for (const h of hist) {
+    const arr = histByEmp.get(h.employee_id) ?? [];
+    arr.push(h);
+    histByEmp.set(h.employee_id, arr);
+  }
+  const turnosByEmp = new Map<string, Turno[]>();
+  for (const t of turnos) {
+    const arr = turnosByEmp.get(t.employee_id) ?? [];
+    arr.push(t);
+    turnosByEmp.set(t.employee_id, arr);
+  }
+  let totalPagarMes = 0;
+  for (const [empId, ts] of turnosByEmp) {
+    const r = calcularPeriodo(ts, histByEmp.get(empId) ?? [], {
+      incluirExtras: true,
+      fracciones,
+    });
+    totalPagarMes += r.total;
+  }
+
+  const fichadosAhora: FichadoAhora[] = (abiertosRes.data ?? []).map((a) => {
+    const e = empById.get(a.employee_id);
+    return {
+      employeeId: a.employee_id,
+      nombre: e ? `${e.nombre}${e.apellido ? " " + e.apellido : ""}` : "—",
+      entradaAt: a.entrada_at,
+    };
+  });
+
+  return { empleadosActivos, totalPagarMes, fichadosAhora };
 }
