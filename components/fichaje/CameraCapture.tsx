@@ -4,12 +4,16 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 
 // Captura selfie con cámara frontal. Devuelve dataURL jpeg al confirmar.
+// onSkip (opcional) habilita un botón "Fichar sin foto" SOLO en la pantalla de
+// error de cámara, para no demorar el fichaje si la cámara no arranca.
 export function CameraCapture({
   onCapture,
   onCancel,
+  onSkip,
 }: {
   onCapture: (dataUrl: string) => void;
   onCancel: () => void;
+  onSkip?: () => void;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -88,8 +92,24 @@ export function CameraCapture({
     <div className="fixed inset-0 z-50 flex flex-col bg-bg-deep">
       <div className="relative flex-1 overflow-hidden">
         {error ? (
-          <div className="flex h-full items-center justify-center p-8 text-center text-cream">
-            {error}
+          <div className="flex h-full flex-col items-center justify-center gap-6 p-8 text-center text-cream">
+            <p className="max-w-sm text-balance">{error}</p>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <Button variant="secondary" size="lg" onClick={onCancel}>
+                Volver
+              </Button>
+              {onSkip && (
+                <Button size="lg" onClick={onSkip}>
+                  Fichar sin foto
+                </Button>
+              )}
+            </div>
+            {onSkip && (
+              <p className="max-w-sm text-xs text-muted">
+                Si la cámara no arranca, fichá igual. Queda registrado sin selfie
+                y el admin lo va a ver.
+              </p>
+            )}
           </div>
         ) : preview ? (
           // eslint-disable-next-line @next/next/no-img-element

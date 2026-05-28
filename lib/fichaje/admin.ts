@@ -182,3 +182,82 @@ export async function getDashboardResumen(
 
   return { empleadosActivos, totalPagarMes, fichadosAhora };
 }
+
+export interface FilaResumenPago {
+  employeeId: string;
+  nombre: string;
+  apellido: string | null;
+  rol: string | null;
+  diasCompletos: number;
+  cantidadExtras: number;
+  totalBase: number;
+  totalExtras: number;
+  total: number;
+}
+
+export interface ResumenPagosMes {
+  filas: FilaResumenPago[];
+  totalGeneral: number;
+}
+
+// Tabla de "cuánto se le paga a cada empleado" en un mes: una fila por empleado
+// con días completos, extras y total. Reusa el mismo cálculo que la liquidación.
+export async function getResumenPagosMes(
+  mes: string,
+): Promise<ResumenPagosMes> {
+  const sb = await db();
+  const { desde, hasta } = rangoMes(mes);
+  const fracciones = await getFraccionesExtra();
+
+  const [empRes, turnosRes, histRes] = await Promise.all([
+    sb.from("employees").select("id, nombre, apellido, rol, activo"),
+    sb.from("turnos").select("*").gte("entrada_at", desde).lt("entrada_at", hasta),
+    sb.from("salary_history").select("*"),
+  ]);
+
+  const empleados = (empRes.data ?? []) as Pick<
+    Employee,
+    "id" | "nombre" | "apellido" | "rol" | "activo"
+  >[];
+  const turnos = (turnosRes.data ?? []) as Turno[];
+  const hist = (histRes.data ?? []) as SalaryHistory[];
+
+  const histByEmp = new Map<string, SalaryHistory[]>();
+  for (const h of hist) {
+    const arr = histByEmp.get(h.employee_id) ?? [];
+    arr.push(h);
+    histByEmp.set(h.employee_id, arr);
+  }
+  const turnosByEmp = new Map<string, Turno[]>();
+  for (const t of turnos) {
+    const arr = turnosByEmp.get(t.employee_id) ?? [];
+    arr.push(t);
+    turnosByEmp.set(t.employee_id, arr);
+  }
+
+  const filas: FilaResumenPago[] = [];
+  let totalGeneral = 0;
+  for (const e of empleados) {
+    const ts = turnosByEmp.get(e.id) ?? [];
+    const r = calcularPeriodo(ts, histByEmp.get(e.id) ?? [], {
+      incluirExtras: true,
+      fracciones,
+    });
+    filas.push({
+      employeeId: e.id,
+      nombre: e.nombre,
+      apellido: e.apellido,
+      rol: e.rol,
+      diasCompletos: r.diasCompletos,
+      cantidadExtras: r.cantidadExtras,
+      totalBase: r.totalBase,
+      totalExtras: r.totalExtras,
+      total: r.total,
+    });
+    totalGeneral += r.total;
+  }
+  // Mayor pago primero; empleados sin turnos al final.
+  filas.sort((a, b) => b.total - a.total);
+
+  return { filas, totalGeneral };
+}

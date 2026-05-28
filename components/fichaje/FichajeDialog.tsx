@@ -89,7 +89,8 @@ export function FichajeDialog({
     setPaso("camara");
   }
 
-  async function enviar(foto: string) {
+  // foto = null cuando el empleado eligió "Fichar sin foto" en el error de cámara.
+  async function enviar(foto: string | null) {
     const armado = calcularAt();
     if (!armado) {
       setPaso("form");
@@ -100,23 +101,17 @@ export function FichajeDialog({
 
     const notaLimpia = nota.trim() || null;
     const url = mode === "entrada" ? "/api/turno" : `/api/turno/${turnoId}/salida`;
+    const base = {
+      pin,
+      nota: notaLimpia,
+      at: armado.at,
+      manual: armado.manual,
+      ...(foto ? { foto_base64: foto } : {}),
+    };
     const body =
       mode === "entrada"
-        ? {
-            employee_id: employeeId,
-            pin,
-            nota: notaLimpia,
-            at: armado.at,
-            manual: armado.manual,
-            foto_base64: foto,
-          }
-        : {
-            pin,
-            nota: notaLimpia,
-            at: armado.at,
-            manual: armado.manual,
-            foto_base64: foto,
-          };
+        ? { employee_id: employeeId, ...base }
+        : base;
 
     const res = await fetch(url, {
       method: "POST",
@@ -133,7 +128,13 @@ export function FichajeDialog({
   }
 
   if (paso === "camara") {
-    return <CameraCapture onCapture={enviar} onCancel={() => setPaso("form")} />;
+    return (
+      <CameraCapture
+        onCapture={enviar}
+        onCancel={() => setPaso("form")}
+        onSkip={() => enviar(null)}
+      />
+    );
   }
 
   if (paso === "enviando") {

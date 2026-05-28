@@ -8,17 +8,17 @@ import {
 } from "@/lib/fichaje/admin";
 import { getTurnosMes, mesActual } from "@/lib/fichaje/historial";
 import { createServiceClient } from "@/lib/supabase/server";
-import { calcularPeriodo } from "@/lib/fichaje/sueldo";
+import { calcularPeriodo, formatARS } from "@/lib/fichaje/sueldo";
 import { MesSelector } from "@/components/empleado/MesSelector";
 import { ConfigSueldoForm } from "@/components/admin/ConfigSueldoForm";
 import { EmpleadoAcciones } from "@/components/admin/EmpleadoAcciones";
 import { SueldoSummary } from "@/components/admin/SueldoSummary";
 import { Card } from "@/components/ui/Card";
-import { SelfieThumb } from "@/components/admin/SelfieThumb";
-import { BorrarFichajeBtn } from "@/components/admin/BorrarFichajeBtn";
 import { SelfieGallery, type SelfieItem } from "@/components/admin/SelfieGallery";
-import { TipoTurnoEditor } from "@/components/admin/TipoTurnoEditor";
-import { BadgeManual } from "@/components/fichaje/BadgeManual";
+import {
+  TurnosAdminTable,
+  type FilaTurno,
+} from "@/components/admin/TurnosAdminTable";
 
 export const dynamic = "force-dynamic";
 
@@ -86,6 +86,65 @@ export default async function EmpleadoDetalle({
     }
   }
 
+  const nombreCompleto = `${empleado.nombre} ${empleado.apellido ?? ""}`.trim();
+
+  const filas: FilaTurno[] = turnos.map((t, i) => {
+    const d = resumen.dias[i]!;
+    const entradaUrl = t.entrada_foto_path
+      ? (firmadas.get(t.entrada_foto_path) ?? null)
+      : null;
+    const salidaUrl = t.salida_foto_path
+      ? (firmadas.get(t.salida_foto_path) ?? null)
+      : null;
+    return {
+      id: t.id,
+      fechaTxt: formatAR(t.entrada_at, "dd/MM/yy"),
+      tipoJornada: t.tipo_jornada,
+      extraModo: t.extra_modo,
+      entradaHora: horaAR(t.entrada_at),
+      entradaUrl,
+      entradaManual: t.entrada_manual,
+      entradaDetalle:
+        t.entrada_foto_path && firmadas.has(t.entrada_foto_path)
+          ? {
+              item: {
+                url: firmadas.get(t.entrada_foto_path)!,
+                timestamp: t.entrada_at,
+                marca: "entrada",
+                tipoJornada: t.tipo_jornada,
+                extraModo: t.extra_modo,
+                nota: t.nota,
+              },
+              nombreCompleto,
+              rol: empleado.rol,
+            }
+          : undefined,
+      salidaAbierto: !t.salida_at,
+      salidaHora: t.salida_at ? horaAR(t.salida_at) : "",
+      salidaUrl,
+      salidaManual: t.salida_manual,
+      salidaDetalle:
+        t.salida_at && t.salida_foto_path && firmadas.has(t.salida_foto_path)
+          ? {
+              item: {
+                url: firmadas.get(t.salida_foto_path)!,
+                timestamp: t.salida_at,
+                marca: "salida",
+                tipoJornada: t.tipo_jornada,
+                extraModo: t.extra_modo,
+                nota: t.nota,
+              },
+              nombreCompleto,
+              rol: empleado.rol,
+            }
+          : undefined,
+      nota: t.nota,
+      horasTxt: d.horas != null ? d.horas.toFixed(1) : "—",
+      subtotalTxt: d.subtotal > 0 ? formatARS(d.subtotal) : "—",
+      borrarEtiqueta: `turno del ${formatAR(t.entrada_at, "dd/MM/yy")}`,
+    };
+  });
+
   return (
     <div className="space-y-8">
       <div>
@@ -109,108 +168,12 @@ export default async function EmpleadoDetalle({
         <ConfigSueldoForm empleado={empleado} />
       </Card>
 
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="font-heading text-2xl text-cream">Período</h2>
         <MesSelector mes={mes} />
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-muted/15">
-        <table className="w-full text-sm">
-          <thead className="bg-bg-card text-muted">
-            <tr>
-              <th className="px-3 py-3 text-left">Fecha</th>
-              <th className="px-3 py-3 text-left">Tipo</th>
-              <th className="px-3 py-3 text-left">Entrada</th>
-              <th className="px-3 py-3 text-left">Salida</th>
-              <th className="px-3 py-3 text-left">Notas</th>
-              <th className="px-3 py-3 text-right">Horas</th>
-              <th className="px-3 py-3 text-right">Subtotal</th>
-              <th className="px-3 py-3" />
-            </tr>
-          </thead>
-          <tbody>
-            {turnos.map((t, i) => {
-              const d = resumen.dias[i]!;
-              return (
-                <tr key={t.id} className="border-t border-muted/10">
-                  <td className="px-3 py-3 text-cream">
-                    {formatAR(t.entrada_at, "EEE d")}
-                  </td>
-                  <td className="px-3 py-3">
-                    <TipoTurnoEditor
-                      turnoId={t.id}
-                      tipoInicial={t.tipo_jornada}
-                      extraInicial={t.extra_modo}
-                    />
-                  </td>
-                  <td className="px-3 py-3">
-                    <div className="flex items-center gap-2">
-                      <SelfieThumb
-                        url={
-                          t.entrada_foto_path
-                            ? (firmadas.get(t.entrada_foto_path) ?? null)
-                            : null
-                        }
-                        hora={horaAR(t.entrada_at)}
-                      />
-                      {t.entrada_manual && <BadgeManual />}
-                    </div>
-                  </td>
-                  <td className="px-3 py-3">
-                    {t.salida_at ? (
-                      <div className="flex items-center gap-2">
-                        <SelfieThumb
-                          url={
-                            t.salida_foto_path
-                              ? (firmadas.get(t.salida_foto_path) ?? null)
-                              : null
-                          }
-                          hora={horaAR(t.salida_at)}
-                        />
-                        {t.salida_manual && <BadgeManual />}
-                      </div>
-                    ) : (
-                      <span className="text-muted">abierto</span>
-                    )}
-                  </td>
-                  <td className="max-w-[12rem] px-3 py-3 text-cream">
-                    {t.nota ? (
-                      <span className="line-clamp-2 text-xs">{t.nota}</span>
-                    ) : (
-                      <span className="text-muted">—</span>
-                    )}
-                  </td>
-                  <td className="px-3 py-3 text-right text-cream">
-                    {d.horas != null ? d.horas.toFixed(1) : "—"}
-                  </td>
-                  <td className="px-3 py-3 text-right text-cream">
-                    {d.subtotal > 0
-                      ? new Intl.NumberFormat("es-AR", {
-                          style: "currency",
-                          currency: "ARS",
-                          maximumFractionDigits: 0,
-                        }).format(d.subtotal)
-                      : "—"}
-                  </td>
-                  <td className="px-3 py-3 text-right">
-                    <BorrarFichajeBtn
-                      turnoId={t.id}
-                      etiqueta={`turno del ${formatAR(t.entrada_at, "d 'de' MMMM")}`}
-                    />
-                  </td>
-                </tr>
-              );
-            })}
-            {turnos.length === 0 && (
-              <tr>
-                <td colSpan={8} className="px-3 py-8 text-center text-muted">
-                  Sin fichajes este mes.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      <TurnosAdminTable filas={filas} />
 
       <SueldoSummary
         diasCompletos={resumen.diasCompletos}
