@@ -42,6 +42,12 @@ export default async function AdminDashboard() {
             {formatARS(resumen.totalPagarMes)}
           </p>
           <p className="mt-1 text-xs text-muted">Estimado (base + extras)</p>
+          <Link
+            href="/admin/resumen"
+            className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-accent-warm hover:text-accent"
+          >
+            Ver detalle por empleado →
+          </Link>
         </Card>
 
         <Card>

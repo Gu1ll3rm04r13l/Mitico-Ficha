@@ -23,6 +23,9 @@ export function ConfigSueldoForm({ empleado }: { empleado: Employee }) {
   const [horaOverride, setHoraOverride] = useState(
     empleado.tarifa_hora_override?.toString() ?? "",
   );
+  const [vigenteDesde, setVigenteDesde] = useState(
+    new Date().toISOString().slice(0, 10),
+  );
   const [avanzado, setAvanzado] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [pending, start] = useTransition();
@@ -71,6 +74,20 @@ export function ConfigSueldoForm({ empleado }: { empleado: Employee }) {
         <p className="mt-1 text-xs text-muted">
           Tarifa diaria: {formatARS(tarifaDiaria)} (mensual ÷ 30) · Tarifa horaria:{" "}
           {formatARS(tarifaHoraria)} (diaria ÷ {horasJornada || 8}h)
+        </p>
+      </div>
+
+      <div>
+        <Input
+          name="vigente_desde"
+          label="Vigente desde"
+          type="date"
+          value={vigenteDesde}
+          onChange={(e) => setVigenteDesde(e.target.value)}
+        />
+        <p className="mt-1 text-xs text-muted">
+          Desde qué día aplica este sueldo. Para recalcular todo el mes en curso,
+          poné el día 1. Los días anteriores a esta fecha mantienen el sueldo previo.
         </p>
       </div>
 

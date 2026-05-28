@@ -32,8 +32,8 @@ export function TurnosTable({
 
   return (
     <div className="space-y-5">
-      <div className="overflow-hidden rounded-2xl border border-muted/15">
-        <table className="w-full text-sm">
+      <div className="overflow-x-auto rounded-2xl border border-muted/15">
+        <table className="w-full min-w-[22rem] text-sm">
           <thead className="bg-bg-card text-muted">
             <tr>
               <th className="px-3 py-3 text-left">Día</th>
@@ -53,7 +53,7 @@ export function TurnosTable({
             {turnos.map((t) => (
               <tr key={t.id} className="border-t border-muted/10">
                 <td className="px-3 py-3 text-cream">
-                  {formatAR(t.entrada_at, "EEE d MMM")}
+                  {formatAR(t.entrada_at, "dd/MM/yy")}
                 </td>
                 <td className="px-3 py-3 text-cream">
                   {horaAR(t.entrada_at)}
@@ -69,7 +69,7 @@ export function TurnosTable({
                     <button
                       type="button"
                       onClick={() => setDialogo({ tipo: "salida", turnoId: t.id })}
-                      className="rounded-lg bg-accent px-3 py-1 text-xs font-semibold text-bg-deep transition active:scale-95"
+                      className="inline-flex min-h-11 items-center rounded-lg bg-accent px-4 py-2 text-xs font-semibold text-bg-deep transition active:scale-95"
                     >
                       Fichar
                     </button>

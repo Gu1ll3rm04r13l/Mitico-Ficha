@@ -12,7 +12,8 @@ const schema = z.object({
   nota: z.string().max(200).nullable().optional(),
   at: z.string().datetime(),
   manual: z.boolean().default(false),
-  foto_base64: z.string().min(100),
+  // Opcional: si la cámara falla, el empleado puede fichar sin foto desde el cartel de error.
+  foto_base64: z.string().min(100).optional(),
 });
 
 // NOTE: lockout en memoria, se resetea en cold start (serverless). Tradeoff aceptado para este kiosko.
@@ -95,23 +96,25 @@ export async function POST(
 
   let fotoPath: string | null = null;
   let fotoUrl: string | null = null;
-  try {
-    const { buffer, ext } = dataUrlToBuffer(input.foto_base64);
-    const ym = input.at.slice(0, 7);
-    fotoPath = `${emp.id}/${ym}/${Date.now()}-salida.${ext}`;
-    const { error: upErr } = await svc.storage
-      .from("fichaje-selfies")
-      .upload(fotoPath, buffer, {
-        contentType: ext === "png" ? "image/png" : "image/jpeg",
-        upsert: false,
-      });
-    if (upErr) throw upErr;
-    const { data: signed } = await svc.storage
-      .from("fichaje-selfies")
-      .createSignedUrl(fotoPath, 3600);
-    fotoUrl = signed?.signedUrl ?? null;
-  } catch {
-    return NextResponse.json({ error: "no se pudo guardar la foto" }, { status: 500 });
+  if (input.foto_base64) {
+    try {
+      const { buffer, ext } = dataUrlToBuffer(input.foto_base64);
+      const ym = input.at.slice(0, 7);
+      fotoPath = `${emp.id}/${ym}/${Date.now()}-salida.${ext}`;
+      const { error: upErr } = await svc.storage
+        .from("fichaje-selfies")
+        .upload(fotoPath, buffer, {
+          contentType: ext === "png" ? "image/png" : "image/jpeg",
+          upsert: false,
+        });
+      if (upErr) throw upErr;
+      const { data: signed } = await svc.storage
+        .from("fichaje-selfies")
+        .createSignedUrl(fotoPath, 3600);
+      fotoUrl = signed?.signedUrl ?? null;
+    } catch {
+      return NextResponse.json({ error: "no se pudo guardar la foto" }, { status: 500 });
+    }
   }
 
   // La nota se guarda en la entrada; en la salida solo la pisamos si vino una nueva.

@@ -155,6 +155,11 @@ export async function guardarConfigSueldo(
   const diarioOverride = parseNum(formData.get("sueldo_diario_override"));
   const horaOverride = parseNum(formData.get("tarifa_hora_override"));
   const horasJornada = parseNum(formData.get("horas_jornada_estandar")) ?? 8;
+  // El usuario elige desde cuándo aplica este sueldo (default: hoy).
+  const vigenteRaw = String(formData.get("vigente_desde") ?? "").trim();
+  const vigenteDesde = /^\d{4}-\d{2}-\d{2}$/.test(vigenteRaw)
+    ? vigenteRaw
+    : new Date().toISOString().slice(0, 10);
 
   const supabase = await createClient();
   const db = supabase.schema("fichaje");
@@ -172,19 +177,26 @@ export async function guardarConfigSueldo(
     .eq("id", employeeId);
   if (upErr) return { ok: false, error: "No se pudo guardar" };
 
-  // Inserta fila en salary_history con vigencia desde hoy
-  const hoy = new Date().toISOString().slice(0, 10);
+  // Inserta (o reemplaza) la fila de salary_history con la vigencia elegida.
+  // Si ya existe una fila para esa misma fecha, la pisa para no duplicar.
+  await db
+    .from("salary_history")
+    .delete()
+    .eq("employee_id", employeeId)
+    .eq("vigente_desde", vigenteDesde);
   const { error: histErr } = await db.from("salary_history").insert({
     employee_id: employeeId,
     sueldo_mensual: sueldoMensual,
     sueldo_diario_override: diarioOverride,
     tarifa_hora_override: horaOverride,
     horas_jornada_estandar: horasJornada,
-    vigente_desde: hoy,
+    vigente_desde: vigenteDesde,
   });
   if (histErr) return { ok: false, error: "No se pudo registrar el historial" };
 
   revalidatePath(`/admin/empleados/${employeeId}`);
+  revalidatePath("/admin"); // refresca el "Total a pagar del mes" del dashboard
+  revalidatePath("/admin/resumen"); // y la tabla resumen de pagos
   return { ok: true };
 }
 

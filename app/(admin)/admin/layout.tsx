@@ -16,7 +16,7 @@ export default async function AdminLayout({
   return (
     <div className="min-h-dvh">
       <header className="border-b border-muted/15 bg-bg-card">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
+        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3">
           <Link href="/admin" className="font-heading text-2xl text-accent">
             MÍTICO · Admin
           </Link>

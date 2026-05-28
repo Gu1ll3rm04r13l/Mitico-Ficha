@@ -29,13 +29,13 @@ export function AdminNav({
   }
 
   return (
-    <nav className="flex items-center gap-1 text-sm">
+    <nav className="flex flex-wrap items-center gap-1 text-sm">
       {links.map((l) => (
         <Link
           key={l.href}
           href={l.href}
           className={cn(
-            "rounded-lg px-3 py-1.5 transition",
+            "inline-flex min-h-11 items-center rounded-lg px-3 transition",
             pathname === l.href
               ? "bg-accent text-bg-deep"
               : "text-muted hover:text-cream",
@@ -49,7 +49,7 @@ export function AdminNav({
       </span>
       <button
         onClick={salir}
-        className="ml-1 rounded-lg px-3 py-1.5 text-muted hover:text-cream"
+        className="ml-1 inline-flex min-h-11 items-center rounded-lg px-3 text-muted hover:text-cream"
       >
         Salir
       </button>

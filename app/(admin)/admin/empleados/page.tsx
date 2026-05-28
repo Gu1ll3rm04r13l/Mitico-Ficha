@@ -16,7 +16,7 @@ export default async function EmpleadosPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="font-heading text-4xl text-cream">Empleados</h1>
           <p className="mt-1 text-sm text-muted">
@@ -24,11 +24,13 @@ export default async function EmpleadosPage() {
             y las fotos del mes.
           </p>
         </div>
-        <NuevoEmpleado />
+        <div className="shrink-0">
+          <NuevoEmpleado />
+        </div>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-muted/15">
-        <table className="w-full text-sm">
+      <div className="overflow-x-auto rounded-2xl border border-muted/15">
+        <table className="w-full min-w-[32rem] text-sm">
           <thead className="bg-bg-card text-muted">
             <tr>
               <th className="px-4 py-3 text-left">Nombre</th>

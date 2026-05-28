@@ -15,12 +15,14 @@ export default async function CuentasPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="font-heading text-4xl text-cream">Cuentas</h1>
         {esAdmin && (
-          <NuevaCuentaStaff
-            empleados={empleados.map((e) => ({ id: e.id, nombre: e.nombre }))}
-          />
+          <div className="shrink-0">
+            <NuevaCuentaStaff
+              empleados={empleados.map((e) => ({ id: e.id, nombre: e.nombre }))}
+            />
+          </div>
         )}
       </div>
 
